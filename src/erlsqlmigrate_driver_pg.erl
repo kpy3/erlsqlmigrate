@@ -26,12 +26,8 @@
 %% already exist
 create(ConnArgs,_Args) ->
     Conn = connect(ConnArgs),
-    case is_setup(Conn) of
-        true -> ok;
-        false ->
-            {ok,[],[]} = squery(Conn, "CREATE TABLE migrations(title TEXT PRIMARY KEY,updated TIMESTAMP)"),
-            ok
-    end.
+    {ok,[],[]} = squery(Conn, "CREATE TABLE IF NOT EXISTS migrations(title TEXT PRIMARY KEY,updated TIMESTAMP)"),
+    ok.
 
 %% @spec up(Config, Migrations) -> ok
 %%       Config = erlsqlmigrate:config()
@@ -158,7 +154,7 @@ update(Conn,Migration) ->
 %% @doc Delete the migrations table entry for the given migration
 delete(Conn,Migration) ->
     Title = iolist_to_binary(Migration#migration.title),
-    equery(Conn, "DELETE FROM migrations where title = $1",
+    equery(Conn, "DELETE FROM migrations WHERE title = $1",
            [Title]).
 
 %% @spec applied(Conn, Migration) -> ok
@@ -169,18 +165,7 @@ delete(Conn,Migration) ->
 %% querying the migrations table
 applied(Conn, Migration) ->
     Title = iolist_to_binary(Migration#migration.title),
-    case equery(Conn, "SELECT * FROM migrations where title=$1",[Title]) of
-        {ok, _Cols, [_Row]} -> true;
-        {ok, _Cols, []} -> false
-    end.
-
-%% @spec is_setup(Conn) -> true | false
-%%       Conn = pid()
-%%
-%% @doc Simple function to check if the migrations table is set up
-%% correctly.
-is_setup(Conn) ->
-    case squery(Conn, "SELECT * FROM pg_tables WHERE tablename='migrations' and schemaname = current_schema()") of
+    case equery(Conn, "SELECT * FROM migrations WHERE title=$1",[Title]) of
         {ok, _Cols, [_Row]} -> true;
         {ok, _Cols, []} -> false
     end.
